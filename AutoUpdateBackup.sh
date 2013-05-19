@@ -79,5 +79,3 @@
           echo "RaspberryPI backup process failed!"
           exit 1
     fi
-
-[edit] 
