@@ -1,20 +1,21 @@
     #!/bin/bash
 
     # Setting up directories
-    SUBDIR=raspberrypi_backups
-    DIR=/hdd/$SUBDIR
+    # avoid the trailing zero
+    SUBDIR=/media/cifsshares/Public
+    DIR=$SUBDIR
 
     echo "Updating System"
 
     apt-get update
-    apt-get upgrade
+    apt-get -y upgrade
 
     echo "Starting RaspberryPI backup process!"
 
     # First check if pv package is installed, if not, install it first
     PACKAGESTATUS=`dpkg -s pv | grep Status`;
 
-    if dpkg -s pv | grep -q Status; then
+    if dpkg -s pv | grep -q Status;
        then
           echo "Package 'pv' is installed."
        else
