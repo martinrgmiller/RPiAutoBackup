@@ -15,14 +15,15 @@
     PURGE=false
     CIFSHOST=//192.168.0.8
     CIFSSHARE=Public
-    CIFSCRED=/home/raspberrypi/cifs.cred
-    CIFSUID=raspberrypi
+    CIFSCRED=/home/jack/cifs.cred
+    CIFSUID=jack
     #Uncomment the following to redirect all the output to a logfile
     #exec &> /var/log/AutoUpdateBackup.log
 
     echo "Updating System : $(date)"
     apt-get update
     apt-get -y upgrade
+    apt-get clean
 
     echo "Checking CIFSSHARE  : $(date)"
     if [ -z ${CIFSHOST+x} ];
@@ -63,10 +64,11 @@
     fi
 
     # Create a filename with datestamp for our current backup (without .img suffix)
-    OFILE="$BACKUPDIR/backup_$(date +%Y%m%d_%H%M%S)"
-
+    THISHOST=$(cat /etc/hostname)
+    OFILE="backup_$THISHOST-$(date +%Y%m%d_%H%M%S)"
+    echo $OFILE
     # Create final filename, with suffix
-    OFILEFINAL=$OFILE.img
+    OFILEFINAL=$BACKUPDIR/$OFILE.img
 
     # First sync disks
     sync; sync
@@ -81,7 +83,7 @@
     echo "Backing up SD card to USB HDD.  : $(date)"
     echo "This will take some time depending on your SD card size and read performance. Please wait... : $(date)"
     SDSIZE=`blockdev --getsize64 /dev/mmcblk0`;
-    pv -tpreb /dev/mmcblk0 -s $SDSIZE | dd of=$OFILE bs=1M conv=sync,noerror iflag=fullblock
+    pv -tpreb /dev/mmcblk0 -s $SDSIZE | dd of=$OFILEFINAL bs=1M conv=sync,noerror iflag=fullblock
 
     # Wait for DD to finish and catch result
     RESULT=$?
@@ -100,11 +102,12 @@
              then
                 echo "Purging Old Backups before zipping  : $(date)"
                 exit 0
-                rm -f $BACKUPDIR/backup_*.tar.gz
+                rm -f $BACKUPDIR/backup_$THISHOST-*.tar.gz
           fi
           mv $OFILE $OFILEFINAL
           echo "Latest Backup is being tarred. Please wait...  : $(date)"
-          tar zcf $OFILEFINAL.tar.gz $OFILEFINAL
+          cd $BACKUPDIR
+          tar zcf $OFILE.tar.gz $OFILEFINAL
           rm -rf $OFILEFINAL
           echo "RaspberryPI backup process completed! FILE: $OFILEFINAL.tar.gz  : $(date)"
           # Clean up mountpoint
@@ -121,6 +124,6 @@
           echo "Backup failed! Previous backup files untouched.  : $(date)"
           echo "Please check there is sufficient space on the HDD.  : $(date)"
           rm -f $OFILE
-          echo "RaspberryPI backup process failed!  : $(date)"
+          echo "RaspberryPi backup process failed!  : $(date)"
           exit 1
     fi
