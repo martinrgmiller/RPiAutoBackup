@@ -1,4 +1,4 @@
-    #!/usr/bin/env bash
+#!/bin/bash
 
     # This script is designed to run on a RaspberryPi and is intened to automatically up and backup the operational SD card.
     # Further information can be found at http://wiki.raspberrytorte.com/index.php?title=Auto_Update_Backup
@@ -12,18 +12,19 @@
     # CIFSUID is the users who has write permissions to CIFSSHARE, required if CIFSHOST is enabled
     EXTDIR=/media/cifsshares/Public
     BACKUPDIR=$EXTDIR/RPi_autobuild_backup
-    PURGE=false
-    CIFSHOST=//192.168.0.8
+    PURGE=true
+    CIFSHOST=//red-dwarf
     CIFSSHARE=Public
     CIFSCRED=/home/jack/cifs.cred
     CIFSUID=jack
     #Uncomment the following to redirect all the output to a logfile
-    #exec &> /var/log/AutoUpdateBackup.log
+    exec &> /var/log/AutoUpdateBackup.log
 
     echo "Updating System : $(date)"
-    apt-get update
-    apt-get -y upgrade
-    apt-get clean
+    /usr/bin/apt-get update
+    /usr/bin/apt-get -y upgrade
+    /usr/bin/rpi-update
+    /usr/bin/apt-get clean
 
     echo "Checking CIFSSHARE  : $(date)"
     if [ -z ${CIFSHOST+x} ];
@@ -40,7 +41,7 @@
                mkdir -p $EXTDIR
             fi
             echo "Mounting Backup location  : $(date)"
-            mount -t cifs $CIFSHOST/$CIFSSHARE -o credentials=$CIFSCRED,uid=$CIFSUID $EXTDIR
+            /bin/mount -t cifs $CIFSHOST/$CIFSSHARE -o credentials=$CIFSCRED,uid=$CIFSUID $EXTDIR
     fi
 
     echo "Starting RaspberryPI backup process!  : $(date)"
@@ -53,7 +54,7 @@
        else
           echo "Package 'pv' is NOT installed.  : $(date)"
           echo "Installing package 'pv'. Please wait...  : $(date)"
-          apt-get -y install pv
+          /usr/bin/apt-get -y install pv
     fi
 
     # Check if backup directory exists
@@ -75,24 +76,24 @@
 
     # Shut down some services before starting backup process
     echo "Stopping some services before backup.  : $(date)"
-    service apache2 stop
-    service mysql stop
-    service cron stop
+    /usr/sbin/service apache2 stop
+    /usr/sbin/service mysql stop
+    /usr/sbin/service cron stop
 
     # Begin the backup process, should take about 1 hour from 8Gb SD card to HDD
     echo "Backing up SD card to USB HDD.  : $(date)"
     echo "This will take some time depending on your SD card size and read performance. Please wait... : $(date)"
     SDSIZE=`blockdev --getsize64 /dev/mmcblk0`;
-    pv -tpreb /dev/mmcblk0 -s $SDSIZE | dd of=$OFILEFINAL bs=1M conv=sync,noerror iflag=fullblock
+    /usr/bin/pv -tpreb /dev/mmcblk0 -s $SDSIZE | dd of=$OFILEFINAL bs=1M conv=sync,noerror iflag=fullblock
 
     # Wait for DD to finish and catch result
     RESULT=$?
 
     # Start services again that where shutdown before backup process
     echo "Start the stopped services again. : $(date)"
-    service apache2 start
-    service mysql start
-    service cron start
+    /usr/sbin/service apache2 start
+    /usr/sbin/service mysql start
+    /usr/sbin/service cron start
 
     # If command has completed successfully, delete previous backups and exit
     if [ $RESULT = 0 ];
@@ -114,9 +115,11 @@
           if [ $CIFSSHAREENABLE = 1 ];
              then
                 echo "unmounting temporary CIFSSHARE  : $(date)"
-                umount $EXTDIR
+                /bin/umount $EXTDIR
                 #rmdir  -p $EXTDIR
           fi
+
+          /usr/bin/apt-get clean
           exit 0
 
     # Else remove attempted backup file
@@ -124,6 +127,7 @@
           echo "Backup failed! Previous backup files untouched.  : $(date)"
           echo "Please check there is sufficient space on the HDD.  : $(date)"
           rm -f $OFILE
-          echo "RaspberryPi backup process failed!  : $(date)"
+          echo "RaspberryPI backup process failed!  : $(date)"
+          /usr/bin/apt-get clean
           exit 1
     fi
